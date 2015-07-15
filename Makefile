@@ -264,7 +264,7 @@ compile : check
 		cd $$src; \
 		rsync -avzh --delete --include='*/' --exclude='*' . ../$$WEBROOT/WEB-INF/classes/; \
 		find . -name *class -exec sh -c 'mv $$(dirname $$1)/$$(basename $$1) ../$$WEBROOT/WEB-INF/classes/$$(dirname $$1)' _ "{}"  \; ;\
-		find . -name *java  -exec sh -c 'f=$$(basename $$1);fn=$$(dirname $$1)/$${f%.*};if test $${fn}.java -nt ../$$WEBROOT/WEB-INF/classes/$${fn}.class ; then echo $${fn}.java ; javac -d . -cp $${CLASSPATH}:. $${fn}.java && mv $${fn}.class ../$$WEBROOT/WEB-INF/classes/$${fn}.class; fi' _ "{}"  \; ;\
+		find . -name *java  -exec sh -c 'f=$$(basename $$1);fn=$$(dirname $$1)/$${f%.*};if test ! -f ../$$WEBROOT/WEB-INF/classes/$${fn}.class -o $${fn}.java -nt ../$$WEBROOT/WEB-INF/classes/$${fn}.class ; then echo $${fn}.java ; javac -d . -cp $${CLASSPATH}:. $${fn}.java && mv $${fn}.class ../$$WEBROOT/WEB-INF/classes/$${fn}.class; fi' _ "{}"  \; ;\
 		find . -name *class -exec sh -c 'mv $$(dirname $$1)/$$(basename $$1) ../$$WEBROOT/WEB-INF/classes/$$(dirname $$1)' _ "{}"  \; ;\
 	done;
 
@@ -406,7 +406,7 @@ clean :
 
 .PHONY: log
 log :
-	if [ "$$silent" == "1" ] ; then exit 0; fi
+	if [ "$$silent" = "1" ] ; then exit 0; fi
 	#
 	# Log levels are DEBUG, INFO, WARN, ERROR, FATAL 
 	#
