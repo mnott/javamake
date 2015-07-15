@@ -309,6 +309,7 @@ hcpdeploy : compile
 	touch WEB-INF/web.xml; \
 	for i in $$TO_CLASSES; do rsync -avzh ../$$i WEB-INF/classes/; done; \
 	for i in $$TO_LIB; do rsync -avzh ../$$i WEB-INF/lib/; done; \
+	zip -r ../tmp/$$WEBAPP.war *; \
 	$$HCP_SDK/neo.sh deploy -h $$HCP_HOST -u $$HCP_USER --application $$WEBAPP --source ../tmp/$$WEBAPP.war -a $$HCP_ACCOUNT -p $$HCP_PASS;
 
 
@@ -376,7 +377,7 @@ hcpstatus :
 
 #################################################
 # 
-# Remove all temporary tex-files
+# Remove all generated files
 #
 #################################################
 
@@ -387,10 +388,12 @@ clean :
 	if [ -d "$$TOMCAT/webapps/$$WEBAPP" ]; then \
 		rm -rf "$$TOMCAT/webapps/$$WEBAPP"; \
 	fi; \
-
 	if [ -d $$WEBROOT/WEB-INF/classes ]; then \
 		rm -rf $$WEBROOT/WEB-INF/classes; \
 		mkdir $$WEBROOT/WEB-INF/classes; \
+	fi; \
+	if [ -f tmp/$$WEBAPP.war ]; then \
+		rm -f tmp/$$WEBAPP.war; \
 	fi;
 
 
