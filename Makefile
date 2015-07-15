@@ -89,7 +89,7 @@ CLASSPATH=../$$WEBROOT/WEB-INF/classes:../lib/gson-2.3.1.jar:../lib/log4j.jar:li
 # exists, it can overwrite the parameters set
 # in this Makefile.
 # 
-HCP_CONFIG=config/dev/hcp.properties
+HCP_CONFIG=config/hcp/hcp.properties
 
 #
 # HCP Hostname
