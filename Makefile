@@ -68,6 +68,55 @@ TO_LIB=lib/gson-2.3.1.jar lib/log4j.jar lib/mysql-connector-java-5.1.7-bin.jar l
 CLASSPATH=../$$WEBROOT/WEB-INF/classes:../lib/gson-2.3.1.jar:../lib/log4j.jar:lib/mysql-connector-java-5.1.7-bin.jar:../lib/ngdbc.jar:../lib/servlet-api.jar
 
 
+#################################################
+# 
+# HCP Specific configuration
+# 
+# HCP Prooperties can be set in a proerties file,
+# which is not going to be part of the git commit
+# as it may contain passwords, or it can be set
+# directly in this file. We're showing below the
+# parameters that are otherwise set in the
+# properties file; since we do set a properties
+# file, the values specified in this Makefile
+# are not going to be used, but those of the
+# properties file (if it exists).
+#
+#################################################
+
+#
+# Configuration file for HCP parameters. If it
+# exists, it can overwrite the parameters set
+# in this Makefile.
+# 
+HCP_CONFIG=config/dev/hcp.properties
+
+#
+# HCP Hostname
+#
+HCP_HOST=hanatrial.ondemand.com
+
+#
+# HCP Account Name
+#
+HCP_ACCOUNT=i052341trial
+
+#
+# HCP Username
+# 
+HCP_USER=i052341
+
+#
+# HCP User Password
+# 
+HCP_PASS=topsecret
+
+#
+# Location of the neo.sh script
+#
+HCP_SDK=/pgm/java/hanacloudsdk/tools
+
+
 
 #################################################
 # 
@@ -146,6 +195,16 @@ help :
 	echo "make compile    Compile the project       "
 	echo
 	echo "make deploy     Deploy the project        "
+	echo
+	echo "make hcpdeploy  Deploy the project to HCP "
+	echo
+	echo "make hcpstop    Stop the HCP webapp       "
+	echo
+	echo "make hcpstart   Start the HCP webapp      "
+	echo
+	echo "make hcprestart Restart the HCP webapp    "
+	echo
+	echo "make hcpstatus  Get the HCP webapp status "
 	echo
 
 	echo
@@ -228,6 +287,91 @@ deploy : check compile
 	for i in $$TO_CLASSES; do rsync -avzh ../$$i WEB-INF/classes/; done; \
 	for i in $$TO_LIB; do rsync -avzh ../$$i WEB-INF/lib/; done; \
 	rsync -avzh --delete . "$$TOMCAT/webapps/$$WEBAPP/" ;
+
+
+
+#################################################
+# 
+# HCP Deploy
+#
+#################################################
+
+.PHONY: hcpdeploy
+hcpdeploy : compile
+	$(MAKE) log msg="make hcpdeploy" LVL=info
+	if [ -f "$$HCP_CONFIG" ]; then \
+		for i in $$(cat "$$HCP_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
+	fi; \
+	if [ ! -d tmp ]; then \
+		mkdir tmp; \
+	fi; \
+	cd $$WEBROOT; \
+	touch WEB-INF/web.xml; \
+	for i in $$TO_CLASSES; do rsync -avzh ../$$i WEB-INF/classes/; done; \
+	for i in $$TO_LIB; do rsync -avzh ../$$i WEB-INF/lib/; done; \
+	$$HCP_SDK/neo.sh deploy -h $$HCP_HOST -u $$HCP_USER --application $$WEBAPP --source ../tmp/$$WEBAPP.war -a $$HCP_ACCOUNT -p $$HCP_PASS;
+
+
+#################################################
+# 
+# HCP Stop
+#
+#################################################
+
+.PHONY: hcpstop
+hcpstop :
+	$(MAKE) log msg="make hcpstop" LVL=info
+	if [ -f "$$HCP_CONFIG" ]; then \
+		for i in $$(cat "$$HCP_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
+	fi; \
+	$$HCP_SDK/neo.sh stop -h $$HCP_HOST -u $$HCP_USER --application $$WEBAPP -a $$HCP_ACCOUNT -p $$HCP_PASS;
+
+
+#################################################
+# 
+# HCP Start
+#
+#################################################
+
+.PHONY: hcpstart
+hcpstart :
+	$(MAKE) log msg="make hcpstart" LVL=info
+	if [ -f "$$HCP_CONFIG" ]; then \
+		for i in $$(cat "$$HCP_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
+	fi; \
+	$$HCP_SDK/neo.sh start -h $$HCP_HOST -u $$HCP_USER --application $$WEBAPP -a $$HCP_ACCOUNT -p $$HCP_PASS;
+
+
+#################################################
+# 
+# HCP Restart
+#
+#################################################
+
+.PHONY: hcprestart
+hcprestart :
+	$(MAKE) log msg="make hcprestart" LVL=info
+	if [ -f "$$HCP_CONFIG" ]; then \
+		for i in $$(cat "$$HCP_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
+	fi; \
+	$$HCP_SDK/neo.sh restart -h $$HCP_HOST -u $$HCP_USER --application $$WEBAPP -a $$HCP_ACCOUNT -p $$HCP_PASS;
+
+
+#################################################
+# 
+# HCP Status
+#
+#################################################
+
+.PHONY: hcpstatus
+hcpstatus :
+	$(MAKE) log msg="make hcpstatus" LVL=info
+	if [ -f "$$HCP_CONFIG" ]; then \
+		for i in $$(cat "$$HCP_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
+	fi; \
+	$$HCP_SDK/neo.sh status -h $$HCP_HOST -u $$HCP_USER --application $$WEBAPP -a $$HCP_ACCOUNT -p $$HCP_PASS;
+
+
 
 
 #################################################
