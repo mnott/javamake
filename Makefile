@@ -58,6 +58,11 @@ WEBROOT=WebRoot
 SOURCES=src
 
 #
+# Temporary Directory
+#
+TMPDIR=tmp
+
+#
 # Content that is to be deployed to WEB-INF/classes,
 # relative to the project root of the project. More
 # than one location to be separated by spaces.
@@ -171,9 +176,9 @@ ifndef LVL
 	LVL=DEBUG
 endif
 
-ifndef DEST
-	DEST=tmp
-endif
+include $(MAKE_CONFIG)
+
+include $(HCP_CONFIG)
 
 
 ifeq ($(MAKE),)
@@ -237,16 +242,12 @@ help :
 
 
 
+
 .PHONY: test
 test :
-	if [ -f "$$MAKE_CONFIG" ]; then \
-		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
-	fi; \
-	if [ -f "$$HCP_CONFIG" ]; then \
-		for i in $$(cat "$$HCP_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
-	fi; \
 	echo JAVA_HOME=$$JAVA_HOME;\
-	echo TOMCAT=$$TOMCAT;
+	echo TOMCAT=$$TOMCAT;\
+	echo $$TO_LIB;
 
 
 
@@ -292,9 +293,6 @@ run : check compile
 .PHONY: compile
 compile : check
 	$(MAKE) log msg="make compile" LVL=info
-	if [ -f "$$MAKE_CONFIG" ]; then \
-		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
-	fi; \
 	for src in $$SOURCES; do \
 		cd $$src; \
 		java -version;\
@@ -314,12 +312,6 @@ compile : check
 .PHONY: hcpruntimes
 hcpruntimes : check
 	$(MAKE) log msg="make hcpruntimeversions" LVL=info
-	if [ -f "$$MAKE_CONFIG" ]; then \
-		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
-	fi; \
-	if [ -f "$$HCP_CONFIG" ]; then \
-		for i in $$(cat "$$HCP_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
-	fi; \
 	$$HCP_SDK/neo.sh list-runtime-versions -h $$HCP_HOST -u $$HCP_USER -p $$HCP_PASS; \
 	$$HCP_SDK/neo.sh list-runtimes -h $$HCP_HOST -u $$HCP_USER -p $$HCP_PASS;
 
@@ -333,16 +325,22 @@ hcpruntimes : check
 .PHONY: deploy
 deploy : check compile
 	$(MAKE) log msg="make deploy" LVL=info
-	if [ -f "$$MAKE_CONFIG" ]; then \
-		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
-	fi; \
 	if [ ! -d "$$TOMCAT/webapps/$$WEBAPP" ]; then \
 		mkdir "$$TOMCAT/webapps/$$WEBAPP"; \
 	fi; \
-	cd $$WEBROOT; \
+	if [ ! -d "$$TMPDIR" ]; then \
+		mkdir "$$TMPDIR"; \
+	fi; \
+	cd "$$TMPDIR"; \
+	if [ ! -d "$$WEBAPP" ]; then \
+		mkdir "$$WEBAPP"; \
+	fi; \
+	cd "$$WEBAPP"; \
+	pwd;\
+	rsync -avzh --delete "../../$$WEBROOT"/* .; \
 	touch WEB-INF/web.xml; \
-	for i in $$TO_CLASSES; do rsync -avzh ../$$i WEB-INF/classes/; done; \
-	for i in $$TO_LIB; do rsync -avzh ../$$i WEB-INF/lib/; done; \
+	for i in $$TO_CLASSES; do rsync -avzh ../../$$i WEB-INF/classes/; done; \
+	for i in $$TO_LIB; do rsync -avzh ../../$$i WEB-INF/lib/; done; \
 	rsync -avzh --delete . "$$TOMCAT/webapps/$$WEBAPP/" ;
 
 
@@ -355,9 +353,6 @@ deploy : check compile
 .PHONY: undeploy
 undeploy : check
 	$(MAKE) log msg="make undeploy" LVL=info
-	if [ -f "$$MAKE_CONFIG" ]; then \
-		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
-	fi; \
 	if [ -d "$$TOMCAT/webapps/$$WEBAPP" ]; then \
 		rm -rf "$$TOMCAT/webapps/$$WEBAPP"; \
 	fi;
@@ -373,21 +368,22 @@ undeploy : check
 .PHONY: hcpdeploy
 hcpdeploy : check compile
 	$(MAKE) log msg="make hcpdeploy" LVL=info
-	if [ -f "$$MAKE_CONFIG" ]; then \
-		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
+	if [ ! -d "$$TMPDIR" ]; then \
+		mkdir "$$TMPDIR"; \
 	fi; \
-	if [ -f "$$HCP_CONFIG" ]; then \
-		for i in $$(cat "$$HCP_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
+	cd "$$TMPDIR"; \
+	pwd;\
+	if [ ! -d "$$WEBAPP" ]; then \
+		mkdir "$$WEBAPP"; \
 	fi; \
-	if [ ! -d tmp ]; then \
-		mkdir tmp; \
-	fi; \
-	cd $$WEBROOT; \
+	cd "$$WEBAPP"; \
+	pwd;\
+	rsync -avzh --delete "../../$$WEBROOT"/* .; \
 	touch WEB-INF/web.xml; \
-	for i in $$TO_CLASSES; do rsync -avzh ../$$i WEB-INF/classes/; done; \
-	for i in $$TO_LIB; do rsync -avzh ../$$i WEB-INF/lib/; done; \
-	zip -u -r ../tmp/$$WEBAPP.war *; \
-	$$HCP_SDK/neo.sh deploy -h $$HCP_HOST -u $$HCP_USER --application $$WEBAPP --source ../tmp/$$WEBAPP.war --runtime-version $$HCP_RUNTIME_VERSION -j $$HCP_JAVA_VERSION --delta -a $$HCP_ACCOUNT -p $$HCP_PASS;
+	for i in $$TO_CLASSES; do rsync -avzh ../../$$i WEB-INF/classes/; done; \
+	for i in $$TO_LIB; do rsync -avzh ../../$$i WEB-INF/lib/; done; \
+	zip -u -r ../$$WEBAPP.war *; \
+	$$HCP_SDK/neo.sh deploy -h $$HCP_HOST -u $$HCP_USER --application $$WEBAPP --source ../$$WEBAPP.war --runtime-version $$HCP_RUNTIME_VERSION -j $$HCP_JAVA_VERSION --delta -a $$HCP_ACCOUNT -p $$HCP_PASS;
 
 
 
@@ -400,12 +396,6 @@ hcpdeploy : check compile
 .PHONY: hcpundeploy
 hcpundeploy : check hcpstop
 	$(MAKE) log msg="make hcpundeploy" LVL=info
-	if [ -f "$$MAKE_CONFIG" ]; then \
-		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
-	fi; \
-	if [ -f "$$HCP_CONFIG" ]; then \
-		for i in $$(cat "$$HCP_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
-	fi; \
 	$$HCP_SDK/neo.sh undeploy -h $$HCP_HOST -u $$HCP_USER --application $$WEBAPP -a $$HCP_ACCOUNT -p $$HCP_PASS;
 
 
@@ -418,12 +408,6 @@ hcpundeploy : check hcpstop
 .PHONY: hcpstop
 hcpstop : check
 	$(MAKE) log msg="make hcpstop" LVL=info
-	if [ -f "$$MAKE_CONFIG" ]; then \
-		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
-	fi; \
-	if [ -f "$$HCP_CONFIG" ]; then \
-		for i in $$(cat "$$HCP_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
-	fi; \
 	$$HCP_SDK/neo.sh stop -h $$HCP_HOST -u $$HCP_USER --application $$WEBAPP -a $$HCP_ACCOUNT -p $$HCP_PASS;
 
 
@@ -436,12 +420,6 @@ hcpstop : check
 .PHONY: hcpstart
 hcpstart : check
 	$(MAKE) log msg="make hcpstart" LVL=info
-	if [ -f "$$MAKE_CONFIG" ]; then \
-		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
-	fi; \
-	if [ -f "$$HCP_CONFIG" ]; then \
-		for i in $$(cat "$$HCP_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
-	fi; \
 	$$HCP_SDK/neo.sh start -h $$HCP_HOST -u $$HCP_USER --application $$WEBAPP -a $$HCP_ACCOUNT -p $$HCP_PASS;
 
 
@@ -454,12 +432,6 @@ hcpstart : check
 .PHONY: hcprestart
 hcprestart : check
 	$(MAKE) log msg="make hcprestart" LVL=info
-	if [ -f "$$MAKE_CONFIG" ]; then \
-		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
-	fi; \
-	if [ -f "$$HCP_CONFIG" ]; then \
-		for i in $$(cat "$$HCP_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
-	fi; \
 	$$HCP_SDK/neo.sh restart -h $$HCP_HOST -u $$HCP_USER --application $$WEBAPP -a $$HCP_ACCOUNT -p $$HCP_PASS;
 
 
@@ -472,12 +444,6 @@ hcprestart : check
 .PHONY: hcpstatus
 hcpstatus : check
 	$(MAKE) log msg="make hcpstatus" LVL=info
-	if [ -f "$$MAKE_CONFIG" ]; then \
-		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
-	fi; \
-	if [ -f "$$HCP_CONFIG" ]; then \
-		for i in $$(cat "$$HCP_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
-	fi; \
 	$$HCP_SDK/neo.sh status -h $$HCP_HOST -u $$HCP_USER --application $$WEBAPP -a $$HCP_ACCOUNT -p $$HCP_PASS;
 
 
@@ -492,10 +458,6 @@ hcpstatus : check
 .PHONY: clean
 clean : check
 	$(MAKE) log lvl=info msg="make clean"
-	
-	if [ -f "$$MAKE_CONFIG" ]; then \
-		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
-	fi; \
 	if [ -d "$$TOMCAT/webapps/$$WEBAPP" ]; then \
 		rm -rf "$$TOMCAT/webapps/$$WEBAPP"; \
 	fi; \
@@ -503,9 +465,14 @@ clean : check
 		rm -rf $$WEBROOT/WEB-INF/classes; \
 		mkdir $$WEBROOT/WEB-INF/classes; \
 	fi; \
-	if [ -f tmp/$$WEBAPP.war ]; then \
-		rm -f tmp/$$WEBAPP.war; \
-	fi;
+	if [ -d $$WEBROOT/WEB-INF/lib ]; then \
+		rm -rf $$WEBROOT/WEB-INF/lib; \
+		mkdir $$WEBROOT/WEB-INF/lib; \
+	fi; \
+	if [ -d "$$TMPDIR" ]; then \
+		rm -rf "$$TMPDIR"; \
+	fi; \
+	mkdir "$$TMPDIR"; \
 
 
 
