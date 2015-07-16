@@ -10,9 +10,21 @@
 #################################################
 # 
 # Configuration
+# 
+# All configurations may depend on the local
+# development environment. For this reason,
+# we only list the configuration variables
+# here and give some values; the actual
+# configuration file may overwrite them.
 #
 #################################################
 
+#
+# Makefile that is not commited to git and that
+# will overwrite configuration variables done
+# in this file.
+# 
+MAKE_CONFIG=make.properties
 
 #
 # Our javac lives in $$JAVA_HOME/bin
@@ -124,7 +136,7 @@ HCP_RUNTIME_VERSION=2
 #
 # HCP JAVA VERSION
 #
-HCP_JAVA_VERSION=7
+HCP_JAVA_VERSION=8
 
 
 #################################################
@@ -191,39 +203,50 @@ VERSION    = 0.1
 help :
 
 	echo
-	echo "=========================================="
-	echo "Welcome to this massively informative help"
-	echo "=========================================="
+	echo "============================================="
+	echo "Welcome to this massively informative help..."
+	echo "============================================="
 	echo 
-	echo "You have the following targets:           "
+	echo "You have the following targets:              "
 	echo 
-	echo "make            Make the project          "
+	echo "make              Make the project           "
 	echo
-	echo "make clean      Clean the project         "
+	echo "make clean        Clean the project          "
 	echo
-	echo "make compile    Compile the project       "
+	echo "make compile      Compile the project        "
 	echo
-	echo "make deploy     Deploy the project        "
+	echo "make deploy       Deploy the project         "
 	echo
-	echo "make hcpdeploy  Deploy the project to HCP "
+	echo "make hcpdeploy    Deploy the project to HCP  "
 	echo
-	echo "make hcpstop    Stop the HCP webapp       "
+	echo "make hcpundeploy  Deploy the project to HCP  "
 	echo
-	echo "make hcpstart   Start the HCP webapp      "
+	echo "make hcpstop      Stop the HCP webapp        "
 	echo
-	echo "make hcprestart Restart the HCP webapp    "
+	echo "make hcpstart     Start the HCP webapp       "
 	echo
-	echo "make hcpstatus  Get the HCP webapp status "
+	echo "make hcprestart   Restart the HCP webapp     "
+	echo
+	echo "make hcpstatus    Get the HCP webapp status  "
+	echo
+	echo "make hcpruntimes  List available HCP runtimes"
 	echo
 
 	echo
-	echo "=========================================="
+	echo "============================================="
 
 
 
 .PHONY: test
 test :
-	echo $$PATH
+	if [ -f "$$MAKE_CONFIG" ]; then \
+		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
+	fi; \
+	if [ -f "$$HCP_CONFIG" ]; then \
+		for i in $$(cat "$$HCP_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
+	fi; \
+	echo JAVA_HOME=$$JAVA_HOME;\
+	echo TOMCAT=$$TOMCAT;
 
 
 
@@ -269,6 +292,9 @@ run : check compile
 .PHONY: compile
 compile : check
 	$(MAKE) log msg="make compile" LVL=info
+	if [ -f "$$MAKE_CONFIG" ]; then \
+		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
+	fi; \
 	for src in $$SOURCES; do \
 		cd $$src; \
 		java -version;\
@@ -285,9 +311,12 @@ compile : check
 #
 #################################################
 
-.PHONY: hcplistruntimeversions
-hcplistruntimeversions : 
+.PHONY: hcpruntimes
+hcpruntimes : check
 	$(MAKE) log msg="make hcpruntimeversions" LVL=info
+	if [ -f "$$MAKE_CONFIG" ]; then \
+		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
+	fi; \
 	if [ -f "$$HCP_CONFIG" ]; then \
 		for i in $$(cat "$$HCP_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
 	fi; \
@@ -304,6 +333,9 @@ hcplistruntimeversions :
 .PHONY: deploy
 deploy : check compile
 	$(MAKE) log msg="make deploy" LVL=info
+	if [ -f "$$MAKE_CONFIG" ]; then \
+		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
+	fi; \
 	if [ ! -d "$$TOMCAT/webapps/$$WEBAPP" ]; then \
 		mkdir "$$TOMCAT/webapps/$$WEBAPP"; \
 	fi; \
@@ -314,6 +346,23 @@ deploy : check compile
 	rsync -avzh --delete . "$$TOMCAT/webapps/$$WEBAPP/" ;
 
 
+#################################################
+# 
+# Undeploy
+#
+#################################################
+
+.PHONY: undeploy
+undeploy : check
+	$(MAKE) log msg="make undeploy" LVL=info
+	if [ -f "$$MAKE_CONFIG" ]; then \
+		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
+	fi; \
+	if [ -d "$$TOMCAT/webapps/$$WEBAPP" ]; then \
+		rm -rf "$$TOMCAT/webapps/$$WEBAPP"; \
+	fi;
+
+
 
 #################################################
 # 
@@ -322,8 +371,11 @@ deploy : check compile
 #################################################
 
 .PHONY: hcpdeploy
-hcpdeploy : compile
+hcpdeploy : check compile
 	$(MAKE) log msg="make hcpdeploy" LVL=info
+	if [ -f "$$MAKE_CONFIG" ]; then \
+		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
+	fi; \
 	if [ -f "$$HCP_CONFIG" ]; then \
 		for i in $$(cat "$$HCP_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
 	fi; \
@@ -338,6 +390,25 @@ hcpdeploy : compile
 	$$HCP_SDK/neo.sh deploy -h $$HCP_HOST -u $$HCP_USER --application $$WEBAPP --source ../tmp/$$WEBAPP.war --runtime-version $$HCP_RUNTIME_VERSION -j $$HCP_JAVA_VERSION --delta -a $$HCP_ACCOUNT -p $$HCP_PASS;
 
 
+
+#################################################
+# 
+# HCP Undeploy
+#
+#################################################
+
+.PHONY: hcpundeploy
+hcpundeploy : check hcpstop
+	$(MAKE) log msg="make hcpundeploy" LVL=info
+	if [ -f "$$MAKE_CONFIG" ]; then \
+		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
+	fi; \
+	if [ -f "$$HCP_CONFIG" ]; then \
+		for i in $$(cat "$$HCP_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
+	fi; \
+	$$HCP_SDK/neo.sh undeploy -h $$HCP_HOST -u $$HCP_USER --application $$WEBAPP -a $$HCP_ACCOUNT -p $$HCP_PASS;
+
+
 #################################################
 # 
 # HCP Stop
@@ -345,8 +416,11 @@ hcpdeploy : compile
 #################################################
 
 .PHONY: hcpstop
-hcpstop :
+hcpstop : check
 	$(MAKE) log msg="make hcpstop" LVL=info
+	if [ -f "$$MAKE_CONFIG" ]; then \
+		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
+	fi; \
 	if [ -f "$$HCP_CONFIG" ]; then \
 		for i in $$(cat "$$HCP_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
 	fi; \
@@ -360,8 +434,11 @@ hcpstop :
 #################################################
 
 .PHONY: hcpstart
-hcpstart :
+hcpstart : check
 	$(MAKE) log msg="make hcpstart" LVL=info
+	if [ -f "$$MAKE_CONFIG" ]; then \
+		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
+	fi; \
 	if [ -f "$$HCP_CONFIG" ]; then \
 		for i in $$(cat "$$HCP_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
 	fi; \
@@ -375,8 +452,11 @@ hcpstart :
 #################################################
 
 .PHONY: hcprestart
-hcprestart :
+hcprestart : check
 	$(MAKE) log msg="make hcprestart" LVL=info
+	if [ -f "$$MAKE_CONFIG" ]; then \
+		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
+	fi; \
 	if [ -f "$$HCP_CONFIG" ]; then \
 		for i in $$(cat "$$HCP_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
 	fi; \
@@ -390,8 +470,11 @@ hcprestart :
 #################################################
 
 .PHONY: hcpstatus
-hcpstatus :
+hcpstatus : check
 	$(MAKE) log msg="make hcpstatus" LVL=info
+	if [ -f "$$MAKE_CONFIG" ]; then \
+		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
+	fi; \
 	if [ -f "$$HCP_CONFIG" ]; then \
 		for i in $$(cat "$$HCP_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
 	fi; \
@@ -407,9 +490,12 @@ hcpstatus :
 #################################################
 
 .PHONY: clean
-clean :
+clean : check
 	$(MAKE) log lvl=info msg="make clean"
 	
+	if [ -f "$$MAKE_CONFIG" ]; then \
+		for i in $$(cat "$$MAKE_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
+	fi; \
 	if [ -d "$$TOMCAT/webapps/$$WEBAPP" ]; then \
 		rm -rf "$$TOMCAT/webapps/$$WEBAPP"; \
 	fi; \
