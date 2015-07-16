@@ -116,6 +116,15 @@ HCP_PASS=topsecret
 #
 HCP_SDK=/pgm/java/hanacloudsdk/tools
 
+#
+# HCP Runtime Version
+#
+HCP_RUNTIME_VERSION=2
+
+#
+# HCP JAVA VERSION
+#
+HCP_JAVA_VERSION=7
 
 
 #################################################
@@ -262,12 +271,28 @@ compile : check
 	$(MAKE) log msg="make compile" LVL=info
 	for src in $$SOURCES; do \
 		cd $$src; \
+		java -version;\
 		rsync -avzh --delete --include='*/' --exclude='*' . ../$$WEBROOT/WEB-INF/classes/; \
 		find . -name *class -exec sh -c 'mv $$(dirname $$1)/$$(basename $$1) ../$$WEBROOT/WEB-INF/classes/$$(dirname $$1)' _ "{}"  \; ;\
-		find . -name *java  -exec sh -c 'f=$$(basename $$1);fn=$$(dirname $$1)/$${f%.*};if test ! -f ../$$WEBROOT/WEB-INF/classes/$${fn}.class -o $${fn}.java -nt ../$$WEBROOT/WEB-INF/classes/$${fn}.class ; then echo $${fn}.java ; javac -d . -cp $${CLASSPATH}:. $${fn}.java && mv $${fn}.class ../$$WEBROOT/WEB-INF/classes/$${fn}.class; fi' _ "{}"  \; ;\
+		find . -name *java  -exec sh -c 'f=$$(basename $$1);fn=$$(dirname $$1)/$${f%.*};if test ! -f ../$$WEBROOT/WEB-INF/classes/$${fn}.class -o $${fn}.java -nt ../$$WEBROOT/WEB-INF/classes/$${fn}.class; then echo $${fn}.java ; javac -d . -cp $${CLASSPATH}:. $${fn}.java && mv $${fn}.class ../$$WEBROOT/WEB-INF/classes/$${fn}.class; fi' _ "{}"  \; ;\
 		find . -name *class -exec sh -c 'mv $$(dirname $$1)/$$(basename $$1) ../$$WEBROOT/WEB-INF/classes/$$(dirname $$1)' _ "{}"  \; ;\
 	done;
 
+
+#################################################
+#
+# HCP List Runtime Versions 
+#
+#################################################
+
+.PHONY: hcplistruntimeversions
+hcplistruntimeversions : 
+	$(MAKE) log msg="make hcpruntimeversions" LVL=info
+	if [ -f "$$HCP_CONFIG" ]; then \
+		for i in $$(cat "$$HCP_CONFIG" | sed '/^\#/d' | sed '/^$$/d' | sed -e 's/ //g') ; do a=`echo $$i|cut -d"=" -f 1`; b=`echo $$i|cut -d"=" -f 2`; export $$a=$$b; done; \
+	fi; \
+	$$HCP_SDK/neo.sh list-runtime-versions -h $$HCP_HOST -u $$HCP_USER -p $$HCP_PASS; \
+	$$HCP_SDK/neo.sh list-runtimes -h $$HCP_HOST -u $$HCP_USER -p $$HCP_PASS;
 
 
 #################################################
@@ -309,8 +334,8 @@ hcpdeploy : compile
 	touch WEB-INF/web.xml; \
 	for i in $$TO_CLASSES; do rsync -avzh ../$$i WEB-INF/classes/; done; \
 	for i in $$TO_LIB; do rsync -avzh ../$$i WEB-INF/lib/; done; \
-	zip -r ../tmp/$$WEBAPP.war *; \
-	$$HCP_SDK/neo.sh deploy -h $$HCP_HOST -u $$HCP_USER --application $$WEBAPP --source ../tmp/$$WEBAPP.war -a $$HCP_ACCOUNT -p $$HCP_PASS;
+	zip -u -r ../tmp/$$WEBAPP.war *; \
+	$$HCP_SDK/neo.sh deploy -h $$HCP_HOST -u $$HCP_USER --application $$WEBAPP --source ../tmp/$$WEBAPP.war --runtime-version $$HCP_RUNTIME_VERSION -j $$HCP_JAVA_VERSION --delta -a $$HCP_ACCOUNT -p $$HCP_PASS;
 
 
 #################################################
